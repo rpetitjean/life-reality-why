@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>life real</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #434343 0%, #000000 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .network-lines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .network-lines line {
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 1;
+        }
+
+        .link-item:nth-child(1) {
+            cursor: url('assets/icons/cursor-meanings.svg') 12 12, pointer;
+        }
+
+        .link-item:nth-child(2) {
+            cursor: url('assets/icons/cursor-what-do.svg') 12 12, pointer;
+        }
+
+        .link-item:nth-child(3) {
+            cursor: url('assets/icons/cursor-why-here.svg') 12 12, pointer;
+        }
+
+        .link-item:nth-child(4) {
+            cursor: url('assets/icons/cursor-worth-it.svg') 12 12, pointer;
+        }
+
+        .link-item:nth-child(5) {
+            cursor: url('assets/icons/cursor-who-me.svg') 12 12, pointer;
+        }
+
+        .container {
+            position: fixed;
+            top: calc(50% + 24px);
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+        }
+
+        .profile {
+            position: relative;
+        }
+
+        .avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            overflow: hidden;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        h1 {
+            color: white;
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        .bio {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            max-width: 400px;
+            line-height: 1.6;
+        }
+
+        .links {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+        }
+
+        .link-item {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            width: var(--circle-size, 100px);
+            height: var(--circle-size, 100px);
+            border-radius: 50%;
+            text-decoration: none;
+            color: white;
+            font-weight: 500;
+            font-size: 11px;
+            transition: all 0.4s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .link-item img {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+            filter: brightness(0) invert(1);
+        }
+
+        .link-item span {
+            font-size: 13px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .link-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: scale(1.15);
+        }
+
+        @keyframes float1 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-10px, -15px); }
+        }
+
+        @keyframes float2 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(15px, -10px); }
+        }
+
+        @keyframes float3 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-12px, 12px); }
+        }
+
+        @keyframes float4 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(10px, 15px); }
+        }
+
+        @keyframes float5 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-15px, 8px); }
+        }
+
+    </style>
+</head>
+<body>
+    <svg class="network-lines" xmlns="http://www.w3.org/2000/svg">
+        <line />
+        <line />
+        <line />
+        <line />
+        <line />
+    </svg>
+
+    <div class="container">
+        <div class="profile">
+            <div class="avatar"><img src="https://remipetitjean.studio/Images/Sequence%2003_3.gif" alt=""></div>
+            <h1>LIFE REAL</h1>
+            <p class="bio">when i pause and look back i can't know why behind all the possibilities I am here existing</p>
+        </div>
+    </div>
+
+    <div class="links">
+        <a href="projects/cosmogonie/meanings.html" class="link-item">
+            <img src="assets/icons/meanings.svg" alt="">
+            <span>meanings</span>
+        </a>
+        <a href="projects/cosmogonie/What-do.html" class="link-item">
+            <img src="assets/icons/what-do.svg" alt="">
+            <span>what to do ?</span>
+        </a>
+        <a href="projects/cosmogonie/Why here.html" class="link-item">
+            <img src="assets/icons/why-here.svg" alt="">
+            <span>why / here</span>
+        </a>
+        <a href="projects/cosmogonie/Does it worth it.html" class="link-item">
+            <img src="assets/icons/worth-it.svg" alt="">
+            <span>does it worth it ?</span>
+        </a>
+        <a href="projects/cosmogonie/Who me.html" class="link-item">
+            <img src="assets/icons/who-me.svg" alt="">
+            <span>who / me</span>
+        </a>
+    </div>
+
+    <script>
+        const circleSettings = [
+            { size: 100, angle: -90, radius: 250, lineLength: null, floatName: 'float1', floatDuration: 6 },
+            { size: 200, angle: -25, radius: 280, lineLength: null, floatName: 'float2', floatDuration: 7 },
+            { size: 120, angle: 35, radius: 210, lineLength: null, floatName: 'float3', floatDuration: 8 },
+            { size: 160, angle: 145, radius: 260, lineLength: null, floatName: 'float4', floatDuration: 6.5 },
+            { size: 80, angle: 210, radius: 290, lineLength: null, floatName: 'float5', floatDuration: 7.5 }
+        ];
+
+        function applyCircleSettings() {
+            const buttons = document.querySelectorAll('.link-item');
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+
+            buttons.forEach((button, index) => {
+                const settings = circleSettings[index];
+
+                if (!settings) {
+                    return;
+                }
+
+                if (typeof settings.size === 'number') {
+                    button.style.setProperty('--circle-size', `${settings.size}px`);
+                }
+
+                const size = typeof settings.size === 'number' ? settings.size : 100;
+                const radius = typeof settings.radius === 'number' ? settings.radius : 250;
+                const angle = typeof settings.angle === 'number' ? settings.angle : index * (360 / buttons.length);
+                const angleInRadians = angle * (Math.PI / 180);
+
+                const centerPosX = centerX + Math.cos(angleInRadians) * radius;
+                const centerPosY = centerY + Math.sin(angleInRadians) * radius;
+
+                button.style.left = `${centerPosX - size / 2}px`;
+                button.style.top = `${centerPosY - size / 2}px`;
+
+                if (settings.floatName) {
+                    const duration = typeof settings.floatDuration === 'number' ? settings.floatDuration : 7;
+                    button.style.animation = `${settings.floatName} ${duration}s ease-in-out infinite`;
+                }
+            });
+        }
+
+        function updateLines() {
+            const center = {
+                x: window.innerWidth / 2,
+                y: window.innerHeight / 2
+            };
+
+            const buttons = document.querySelectorAll('.link-item');
+            const lines = document.querySelectorAll('.network-lines line');
+
+            buttons.forEach((button, index) => {
+                const rect = button.getBoundingClientRect();
+                const buttonCenter = {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                };
+
+                if (lines[index]) {
+                    const dx = buttonCenter.x - center.x;
+                    const dy = buttonCenter.y - center.y;
+                    const distance = Math.hypot(dx, dy);
+                    const configuredLength = circleSettings[index]?.lineLength;
+                    const radiusToEdge = rect.width / 2;
+                    const defaultLength = Math.max(0, distance - radiusToEdge);
+                    const targetLength = typeof configuredLength === 'number' ? configuredLength : defaultLength;
+                    const ratio = distance > 0 ? targetLength / distance : 0;
+                    const endX = center.x + dx * ratio;
+                    const endY = center.y + dy * ratio;
+
+                    lines[index].setAttribute('x1', center.x);
+                    lines[index].setAttribute('y1', center.y);
+                    lines[index].setAttribute('x2', endX);
+                    lines[index].setAttribute('y2', endY);
+                }
+            });
+
+            requestAnimationFrame(updateLines);
+        }
+
+        applyCircleSettings();
+        window.addEventListener('resize', applyCircleSettings);
+        updateLines();
+    </script>
+</body>
+</html>

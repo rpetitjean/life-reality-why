@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mini Side-Scroller Template</title>
+  <style>
+    html, body { margin:0; height:100%; background:#111; }
+    body {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:
+        radial-gradient(800px 500px at 20% 10%, #1a1a1a 0%, #111 55%, #070012 100%);
+    }
+    .phone {
+      width: min(740px, 92vw);
+      aspect-ratio: 19.5 / 9;
+      background: #0e0e0e00;
+      border-radius: 28px;
+      padding: 10px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.0), inset 0 0 0 2px rgba(255,255,255,.0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: none;
+    }
+    canvas {
+      display:block;
+      background:#8fd3ff;
+      image-rendering: pixelated;
+      border-radius: 18px;
+    }
+    .hud {
+      position: fixed; left: 12px; top: 10px; color: rgba(255,255,255,.9);
+      font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      user-select: none;
+    }
+    .overlay {
+      position: fixed; inset: 0; display:none; align-items:center; justify-content:center;
+      background: rgba(0,0,0,.55);
+      font: 600 18px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color: #fff; text-align:center;
+    }
+    .overlay .box {
+      background: rgba(20,20,20,.9);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 14px;
+      padding: 18px 18px;
+      width: min(360px, calc(100vw - 32px));
+    }
+    .overlay button {
+      margin-top: 12px;
+      border: 0; border-radius: 10px;
+      padding: 10px 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="hud" id="hud"></div>
+  <div class="overlay" id="overlay">
+    <div class="box">
+      <div id="overlayTitle" style="font-size:20px; margin-bottom:6px;">You died</div>
+      <div style="opacity:.9; font-weight:500;">Press <b>R</b> or click Start again</div>
+      <button id="restartBtn">Start again</button>
+    </div>
+  </div>
+
+  <div class="phone" id="phone">
+    <canvas id="c"></canvas>
+  </div>
+
+  <script>
+  (() => {
+    // ======================
+    // 0) CONFIG (EDIT THESE)
+    // ======================
+    const CONFIG = {
+      textures: {
+        // Provide image URLs or relative paths. Use seamless images for tiled textures.
+        background: "https://remipetitjean.studio/Images/Modigliani0.jpg", // e.g. "images/sky-tile.png"
+        player: "https://remipetitjean.studio/Images/Jeanne.JPG", // e.g. "images/player.png"
+        enemy: "", // e.g. "images/enemy.png"
+        ground: "", // e.g. "images/ground-tile.png"
+        obstacle: "https://remipetitjean.studio/Images/Square03.png" // e.g. "images/obstacle.png"
+      },
+      guide: {
+        // Set true to show helper labels while editing a level layout.
+        showPlacementGuide: false
+      },
+      // LEVEL GUIDE
+      // holes: [startX, endX]
+      // obstacles: {x, y, w, h, texture?}
+      // enemies: {x, y, w, h, minX, maxX, vx, texture?}
+      level: {
+        width: 5200,
+        groundY: 430,
+        holes: [
+          [620, 770],
+          [1450, 1600],
+          [2550, 2700],
+          [3550, 3740],
+        ],
+        obstacles: [
+          // Example with per-obstacle texture:
+          // {x: 760, y: 340, w: 120, h: 90, texture: "images/rock-1.png"},
+          {x: 900,  y: 320, w: 120, h: 110, texture: "https://remipetitjean.studio/Images/Square03.png"},
+          {x: 1120, y: 270, w: 120, h: 160, texture: "https://remipetitjean.studio/Images/Jeanne.JPG"},
+          {x: 1800, y: 340, w: 140, h: 90},
+          {x: 2100, y: 300, w: 140, h: 130},
+          {x: 3050, y: 350, w: 160, h: 80},
+          {x: 3980, y: 310, w: 160, h: 120},
+        ],
+        enemies: [
+          // Example with per-enemy texture:
+          // {x: 900, y: 0, w: 42, h: 42, minX: 860, maxX: 980, vx: 90, texture: "images/slime.png"},
+          {x: 1050, y: 0, w: 42, h: 42, minX: 980, maxX: 1220, vx: 120, texture: "https://remipetitjean.studio/Images/Jeanne.JPG"},
+          {x: 1980, y: 0, w: 42, h: 42, minX: 1900, maxX: 2200, vx: 140},
+          {x: 3200, y: 0, w: 42, h: 42, minX: 3120, maxX: 3400, vx: 110},
+          {x: 4300, y: 0, w: 42, h: 42, minX: 4200, maxX: 4550, vx: 150},
+        ],
+        flag: {x: 4950, y: 260, w: 14, h: 170}
+      }
+    };
+
+    // ======================
+    // 1) CANVAS + RESIZE
+    // ======================
+    const canvas = document.getElementById("c");
+    const phone = document.getElementById("phone");
+    const ctx = canvas.getContext("2d");
+
+    function loadImage(src) {
+      if (!src) return null;
+      const img = new Image();
+      img.src = src;
+      return img;
+    }
+
+    const spriteCache = new Map();
+    function getCachedImage(src) {
+      if (!src) return null;
+      if (!spriteCache.has(src)) {
+        spriteCache.set(src, loadImage(src));
+      }
+      return spriteCache.get(src);
+    }
+
+    function resolveEntityImage(customSrc, fallbackImage) {
+      const custom = getCachedImage(customSrc);
+      return custom || fallbackImage;
+    }
+
+    const assets = {
+      bg: loadImage(CONFIG.textures.background),
+      player: loadImage(CONFIG.textures.player),
+      enemy: loadImage(CONFIG.textures.enemy),
+      ground: loadImage(CONFIG.textures.ground),
+      obstacle: loadImage(CONFIG.textures.obstacle),
+      bgPattern: null,
+      groundPattern: null
+    };
+
+    function buildPatterns() {
+      if (assets.bg && assets.bg.complete) {
+        assets.bgPattern = ctx.createPattern(assets.bg, "repeat");
+      }
+      if (assets.ground && assets.ground.complete) {
+        assets.groundPattern = ctx.createPattern(assets.ground, "repeat");
+      }
+    }
+    if (assets.bg) assets.bg.onload = buildPatterns;
+    if (assets.ground) assets.ground.onload = buildPatterns;
+
+    function fitCanvas() {
+      // fixed game resolution (simple template). Scale by CSS (canvas auto fits to window width but keeps internal res).
+      const targetW = 960;
+      const targetH = 540;
+      canvas.width = targetW;
+      canvas.height = targetH;
+
+      // scale canvas in CSS to fit window while preserving aspect
+      const s = Math.min(phone.clientWidth / targetW, phone.clientHeight / targetH);
+      canvas.style.width = Math.floor(targetW * s) + "px";
+      canvas.style.height = Math.floor(targetH * s) + "px";
+    }
+    window.addEventListener("resize", fitCanvas);
+    fitCanvas();
+
+    // ======================
+    // 2) WORLD CONFIG
+    // ======================
+    const W = () => canvas.width;
+    const H = () => canvas.height;
+
+    const TILE = 48;             // purely for sizing consistency
+    const GRAVITY = 2400;         // px/s^2
+    const MOVE_SPEED = 260;       // px/s (reduced sensitivity)
+    const JUMP_V = 780;           // px/s (slightly softer jump)
+
+    const WORLD = {
+      width: CONFIG.level.width, // level width (bigger than screen)
+      groundY: CONFIG.level.groundY, // top of ground platform
+      cameraX: 0,
+      cameraSmooth: 0.10,        // higher = snappier camera
+      // holes are intervals [x1, x2] in world coordinates on the ground
+      holes: CONFIG.level.holes,
+      // blocks the player can collide with / stand on
+      blocks: CONFIG.level.obstacles,
+      // patrolling enemies
+      enemies: CONFIG.level.enemies,
+      // goal flag
+      flag: CONFIG.level.flag // pole
+    };
+
+    // ======================
+    // 3) PLAYER
+    // ======================
+    const playerStart = { x: 120, y: 0 };
+    const player = {
+      x: playerStart.x,
+      y: playerStart.y,
+      w: 40,
+      h: 54,
+      vx: 0,
+      vy: 0,
+      onGround: false,
+      fellInHole: false,
+      jumpsLeft: 2,
+      alive: true,
+      won: false
+    };
+
+    // ======================
+    // 4) INPUT
+    // ======================
+    const keys = new Set();
+    let jumpQueued = false;
+    let jumpBuffer = 0;
+    let coyoteTimer = 0;
+    window.addEventListener("keydown", (e) => {
+      if (e.repeat) return;
+      keys.add(e.code);
+      if (e.code === "KeyR") reset("manual");
+      if (e.code === "Space") {
+        jumpQueued = true;
+        jumpBuffer = 0.12;
+        e.preventDefault();
+      }
+    });
+    window.addEventListener("keyup", (e) => keys.delete(e.code));
+
+    // ======================
+    // 5) UI OVERLAY
+    // ======================
+    const overlay = document.getElementById("overlay");
+    const overlayTitle = document.getElementById("overlayTitle");
+    const restartBtn = document.getElementById("restartBtn");
+    restartBtn.addEventListener("click", () => reset("button"));
+
+    function showOverlay(titleText) {
+      overlayTitle.textContent = titleText;
+      overlay.style.display = "flex";
+    }
+    function hideOverlay() {
+      overlay.style.display = "none";
+    }
+
+    // ======================
+    // 6) HELPERS (COLLISION)
+    // ======================
+    function rectsIntersect(a, b) {
+      return (
+        a.x < b.x + b.w &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.h &&
+        a.y + a.h > b.y
+      );
+    }
+
+    function clamp(v, lo, hi) {
+      return Math.max(lo, Math.min(hi, v));
+    }
+
+    function isOverHole(px) {
+      // checks if player's center is above any hole interval
+      const cx = px + player.w / 2;
+      for (const [x1, x2] of WORLD.holes) {
+        if (cx >= x1 && cx <= x2) return true;
+      }
+      return false;
+    }
+
+    function reset(reason) {
+      player.x = playerStart.x;
+      player.y = 60;
+      player.vx = 0;
+      player.vy = 0;
+      player.onGround = false;
+      player.fellInHole = false;
+      player.jumpsLeft = 2;
+      player.alive = true;
+      player.won = false;
+
+      // reset enemies to original-ish positions
+      WORLD.enemies.forEach((en) => {
+        en.x = clamp(en.x, en.minX, en.maxX);
+        en.vx = Math.abs(en.vx); // ensure forward
+        // snap on ground each time
+        en.y = WORLD.groundY - en.h;
+      });
+
+      WORLD.cameraX = 0;
+      hideOverlay();
+    }
+
+    // initial placement
+    reset("init");
+
+    // ======================
+    // 7) GAME LOOP
+    // ======================
+    let last = performance.now();
+
+    function step(now) {
+      const dt = Math.min(0.033, (now - last) / 1000); // cap dt for stability
+      last = now;
+
+      update(dt);
+      draw();
+
+      requestAnimationFrame(step);
+    }
+
+    function killPlayer() {
+      if (!player.alive || player.won) return;
+      player.alive = false;
+      showOverlay("You died");
+    }
+
+    function winPlayer() {
+      if (player.won) return;
+      player.won = true;
+      showOverlay("You reached the flag!");
+    }
+
+    function update(dt) {
+      // if dead/won, freeze gameplay
+      if (!player.alive || player.won) return;
+
+      // INPUT → velocity
+      let ax = 0;
+      if (!player.fellInHole) {
+        if (keys.has("ArrowLeft") || keys.has("KeyA")) ax -= 1;
+        if (keys.has("ArrowRight") || keys.has("KeyD")) ax += 1;
+      }
+
+      player.vx = ax * MOVE_SPEED;
+
+      // Jump: buffer + coyote time for responsiveness
+      jumpBuffer = Math.max(0, jumpBuffer - dt);
+      coyoteTimer = player.onGround ? 0.08 : Math.max(0, coyoteTimer - dt);
+
+      const wantsJump = jumpQueued || jumpBuffer > 0;
+      if (wantsJump && !player.fellInHole && (player.onGround || coyoteTimer > 0 || player.jumpsLeft > 0)) {
+        player.vy = -JUMP_V;
+        player.onGround = false;
+        if (player.jumpsLeft > 0) player.jumpsLeft -= 1;
+        coyoteTimer = 0;
+        jumpBuffer = 0;
+      }
+      if (jumpQueued) jumpQueued = false;
+
+      // Gravity
+      player.vy += GRAVITY * dt;
+
+      // Move X and resolve horizontal block collisions
+      player.x += player.vx * dt;
+      player.x = clamp(player.x, 0, WORLD.width - player.w);
+
+      // Horizontal collision with blocks: push out
+      for (const b of WORLD.blocks) {
+        const a = {x: player.x, y: player.y, w: player.w, h: player.h};
+        if (!rectsIntersect(a, b)) continue;
+
+        // if moving right, push to left of block; if moving left, push to right
+        if (player.vx > 0) player.x = b.x - player.w;
+        else if (player.vx < 0) player.x = b.x + b.w;
+      }
+
+      // Move Y and resolve vertical collisions (ground + blocks)
+      player.y += player.vy * dt;
+
+      // Ground collision (only if NOT over hole)
+      const groundTop = WORLD.groundY;
+      const overHole = isOverHole(player.x);
+      const standingOnGround = (player.y + player.h >= groundTop) && !overHole;
+
+      player.onGround = false;
+      if (standingOnGround) {
+        player.y = groundTop - player.h;
+        player.vy = 0;
+        player.onGround = true;
+        player.jumpsLeft = 2;
+      }
+
+      // Blocks vertical collision
+      for (const b of WORLD.blocks) {
+        const a = {x: player.x, y: player.y, w: player.w, h: player.h};
+        if (!rectsIntersect(a, b)) continue;
+
+        // Determine if we hit block from top or bottom based on velocity direction
+        if (player.vy > 0) {
+          // falling onto block
+          player.y = b.y - player.h;
+          player.vy = 0;
+          player.onGround = true;
+          player.jumpsLeft = 2;
+        } else if (player.vy < 0) {
+          // hitting underside
+          player.y = b.y + b.h;
+          player.vy = 0;
+        }
+      }
+
+      // Hole death: if we are falling below screen (or below a threshold) because of a hole
+      if (overHole && player.y + player.h > groundTop + 8) {
+        player.fellInHole = true;
+      }
+      if (player.y > H() + 120) {
+        killPlayer();
+      }
+
+      // Update enemies
+      for (const en of WORLD.enemies) {
+        en.y = WORLD.groundY - en.h; // keep them on ground (simple)
+        en.x += en.vx * dt;
+        if (en.x < en.minX) { en.x = en.minX; en.vx *= -1; }
+        if (en.x > en.maxX) { en.x = en.maxX; en.vx *= -1; }
+
+        // Collision with player => death
+        const a = {x: player.x, y: player.y, w: player.w, h: player.h};
+        const b = {x: en.x, y: en.y, w: en.w, h: en.h};
+        if (rectsIntersect(a, b)) {
+          killPlayer();
+        }
+      }
+
+      // Win condition: reach flag area (simple rectangle around pole)
+      const flagZone = { x: WORLD.flag.x - 10, y: WORLD.flag.y, w: 40, h: WORLD.flag.h + 80 };
+      if (rectsIntersect({x: player.x, y: player.y, w: player.w, h: player.h}, flagZone)) {
+        winPlayer();
+      }
+
+      // Camera: follow when player approaches right side of screen
+      const viewW = W();
+      const marginLeft = viewW * 0.30;
+      const marginRight = viewW * 0.65;
+
+      // target camera tries to keep player between margins
+      let targetCam = WORLD.cameraX;
+
+      const playerScreenX = player.x - WORLD.cameraX;
+      if (playerScreenX > marginRight) {
+        targetCam = player.x - marginRight;
+      } else if (playerScreenX < marginLeft) {
+        targetCam = player.x - marginLeft;
+      }
+
+      // clamp camera in world bounds
+      targetCam = clamp(targetCam, 0, WORLD.width - viewW);
+
+      // smooth
+      WORLD.cameraX += (targetCam - WORLD.cameraX) * (1 - Math.pow(1 - WORLD.cameraSmooth, dt * 60));
+    }
+
+    // ======================
+    // 8) RENDER
+    // ======================
+    const hud = document.getElementById("hud");
+
+    function draw() {
+      const cam = WORLD.cameraX;
+
+      // background
+      if (assets.bgPattern) {
+        ctx.fillStyle = assets.bgPattern;
+        ctx.fillRect(0, 0, W(), H());
+      } else {
+        ctx.clearRect(0, 0, W(), H());
+        drawClouds(cam);
+      }
+
+      // Ground (draw only segments that are not holes)
+      drawGround(cam);
+
+      // Blocks
+      for (const b of WORLD.blocks) {
+        const obstacleImg = resolveEntityImage(b.texture, assets.obstacle);
+        drawSprite(b.x - cam, b.y, b.w, b.h, obstacleImg, "#333");
+        if (!obstacleImg) {
+          drawRect(b.x - cam + 6, b.y + 6, b.w - 12, b.h - 12, "#4a4a4a");
+        }
+      }
+
+      // Enemies
+      for (const en of WORLD.enemies) {
+        const enemyImg = resolveEntityImage(en.texture, assets.enemy);
+        drawSprite(en.x - cam, en.y, en.w, en.h, enemyImg, "#d63a3a");
+      }
+
+      // Flag (blue)
+      // Pole
+      drawRect(WORLD.flag.x - cam, WORLD.flag.y, WORLD.flag.w, WORLD.flag.h, "#e6e6e6");
+      // Flag cloth
+      drawRect(WORLD.flag.x - cam + WORLD.flag.w, WORLD.flag.y + 18, 52, 26, "#2a7bff");
+      drawRect(WORLD.flag.x - cam + WORLD.flag.w, WORLD.flag.y + 18 + 28, 38, 20, "#2a7bff");
+
+      // Player
+      drawSprite(player.x - cam, player.y, player.w, player.h, assets.player, "#111");
+      if (!assets.player) {
+        drawRect(player.x - cam + 6, player.y + 6, player.w - 12, player.h - 12, "#ffffff");
+      }
+
+      // HUD
+      hud.innerHTML =
+        `Move: <b>A/D</b> or <b><-/-></b> &nbsp; Jump: <b>Space</b> &nbsp; Restart: <b>R</b><br>` +
+        `x: ${Math.floor(player.x)} / ${WORLD.width} &nbsp; camera: ${Math.floor(WORLD.cameraX)}`;
+
+      if (CONFIG.guide.showPlacementGuide) {
+        drawPlacementGuide(cam);
+      }
+    }
+
+    function drawRect(x, y, w, h, fill) {
+      // clip for tiny perf and to avoid huge offscreen draws
+      if (x + w < -200 || x > W() + 200) return;
+      ctx.fillStyle = fill;
+      ctx.fillRect(Math.floor(x), Math.floor(y), Math.floor(w), Math.floor(h));
+    }
+
+    function drawSprite(x, y, w, h, img, fallback) {
+      if (x + w < -200 || x > W() + 200) return;
+      if (img && img.complete) {
+        ctx.drawImage(img, Math.floor(x), Math.floor(y), Math.floor(w), Math.floor(h));
+      } else {
+        drawRect(x, y, w, h, fallback);
+      }
+    }
+
+    function drawGround(cam) {
+      const groundTop = WORLD.groundY;
+      const groundH = H() - groundTop;
+
+      // start with a list of solid segments (0..WORLD.width) and subtract holes
+      let segments = [[0, WORLD.width]];
+      for (const [hx1, hx2] of WORLD.holes) {
+        const next = [];
+        for (const [sx1, sx2] of segments) {
+          if (hx2 <= sx1 || hx1 >= sx2) {
+            next.push([sx1, sx2]);
+          } else {
+            if (sx1 < hx1) next.push([sx1, hx1]);
+            if (hx2 < sx2) next.push([hx2, sx2]);
+          }
+        }
+        segments = next;
+      }
+
+      // draw only segments that appear on screen
+      for (const [sx1, sx2] of segments) {
+        const x = sx1 - cam;
+        const w = sx2 - sx1;
+        if (assets.groundPattern) {
+          ctx.fillStyle = assets.groundPattern;
+          ctx.fillRect(Math.floor(x), Math.floor(groundTop), Math.floor(w), Math.floor(groundH));
+        } else {
+          drawRect(x, groundTop, w, groundH, "#1e1e1e");   // ground fill
+          drawRect(x, groundTop, w, 8, "#2c2c2c");         // top lip
+        }
+      }
+
+      // draw holes as darker rectangles (visual cue)
+      for (const [hx1, hx2] of WORLD.holes) {
+        drawRect(hx1 - cam, groundTop, hx2 - hx1, groundH, "#0b0b0b");
+      }
+    }
+
+    function drawClouds(cam) {
+      // simple rectangles drifting slower than camera (parallax)
+      const px = -cam * 0.2;
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      for (let i = 0; i < 10; i++) {
+        const x = (i * 260 + (px % 260)) - 80;
+        ctx.fillRect(x, 70 + (i % 3) * 30, 120, 22);
+        ctx.fillRect(x + 30, 52 + (i % 3) * 30, 70, 18);
+      }
+    }
+
+    function drawPlacementGuide(cam) {
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.font = "12px monospace";
+      ctx.fillText("Guide ON", 16, 20);
+
+      for (let i = 0; i < WORLD.holes.length; i++) {
+        const [x1, x2] = WORLD.holes[i];
+        const mid = ((x1 + x2) / 2) - cam;
+        ctx.fillStyle = "rgba(255, 220, 120, 0.95)";
+        ctx.fillText(`hole ${i}: [${x1}, ${x2}]`, mid - 62, WORLD.groundY - 10);
+      }
+
+      for (let i = 0; i < WORLD.blocks.length; i++) {
+        const b = WORLD.blocks[i];
+        ctx.fillStyle = "rgba(170, 255, 170, 0.95)";
+        ctx.fillText(`obs ${i}: ${b.x},${b.y}`, b.x - cam, b.y - 8);
+      }
+
+      for (let i = 0; i < WORLD.enemies.length; i++) {
+        const en = WORLD.enemies[i];
+        ctx.fillStyle = "rgba(255, 170, 170, 0.95)";
+        ctx.fillText(`en ${i}: ${en.minX}-${en.maxX}`, en.x - cam - 24, en.y - 8);
+      }
+    }
+
+    // start loop
+    requestAnimationFrame(step);
+  })();
+  </script>
+</body>
+</html>
+
