@@ -1,16 +1,17 @@
 version: 1
 frontend:
   phases:
-    preBuild:
-      commands:
-        - git lfs install
-        - git lfs pull
     build:
       commands:
         - echo "Static site build completed"
   artifacts:
     baseDirectory: .
     files:
-      - '**/*'
+      - index.html
+      - index_old.html
+      - vr.html
+      - 1920_3.mp4
+      - assets/**/*
+      - projects/**/*
   cache:
     paths: []
