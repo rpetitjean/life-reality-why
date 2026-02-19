@@ -37,6 +37,22 @@
             pointer-events: none;
         }
 
+        .video-start {
+            position: fixed;
+            left: 50%;
+            bottom: 24px;
+            transform: translateX(-50%);
+            z-index: 10;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            background: rgba(0, 0, 0, 0.65);
+            color: #fff;
+            font: 600 14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: none;
+        }
+
         .content {
             min-height: 100vh;
             display: flex;
@@ -111,9 +127,10 @@
     </style>
 </head>
 <body>
-    <video class="bg-video" autoplay muted loop playsinline>
+    <video id="bgVideo" class="bg-video" autoplay muted loop playsinline webkit-playsinline preload="metadata">
         <source src="1920_3.mp4" type="video/mp4">
     </video>
+    <button id="videoStart" class="video-start" type="button">Start background video</button>
 
     <div class="fog-overlay"></div>
 
@@ -134,5 +151,23 @@
             <a href="projects/cosmogonie/Who me.html">who / me</a>
         </nav>
     </main>
+
+    <script>
+        const bgVideo = document.getElementById('bgVideo');
+        const videoStart = document.getElementById('videoStart');
+
+        async function ensureVideoPlayback() {
+            try {
+                await bgVideo.play();
+                videoStart.style.display = 'none';
+            } catch (error) {
+                videoStart.style.display = 'block';
+                videoStart.textContent = 'Tap to start video';
+            }
+        }
+
+        videoStart.addEventListener('click', ensureVideoPlayback);
+        document.addEventListener('DOMContentLoaded', ensureVideoPlayback, { once: true });
+    </script>
 </body>
 </html>
