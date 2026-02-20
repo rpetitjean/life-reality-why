@@ -7,10 +7,7 @@ frontend:
   artifacts:
     baseDirectory: .
     files:
-      - index.html
-      - index_old.html
-      - vr.html
-      - 1920_3.mp4
+      - "*.html"
       - assets/**/*
       - projects/**/*
   cache:
