@@ -1,6 +1,6 @@
 # Life, Reality, Why
 
-existentialist exploration
+existentialist exploration & the city of Grenoble
 
 ## Three Central Ideas
 
